@@ -70,8 +70,16 @@ for domain in \
     "sentry.io" \
     "statsig.anthropic.com" \
     "statsig.com" \
+    "files.pythonhosted.org" \
     "marketplace.visualstudio.com" \
+    "vscode.download.prss.microsoft.com" \
     "vscode.blob.core.windows.net" \
+    "sh.rustup.rs" \
+    "static.rust-lang.org" \
+    "index.crates.io" \
+    "static.crates.io" \
+    "crates.io" \
+    "download.visualstudio.microsoft.com" \
     "update.code.visualstudio.com"; do
     echo "Resolving $domain..."
     ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
@@ -80,13 +88,17 @@ for domain in \
         exit 1
     fi
     
+    # Hack to enable Microsoft downloads
+    ipset add -exist allowed-domains "57.150.149.97"
+    # End hack
+
     while read -r ip; do
         if [[ ! "$ip" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
             echo "ERROR: Invalid IP from DNS for $domain: $ip"
             exit 1
         fi
         echo "Adding $ip for $domain"
-        ipset add allowed-domains "$ip"
+        ipset add -exist allowed-domains "$ip"
     done < <(echo "$ips")
 done
 
@@ -99,6 +111,10 @@ fi
 
 HOST_NETWORK=$(echo "$HOST_IP" | sed "s/\.[0-9]*$/.0\/24/")
 echo "Host network detected as: $HOST_NETWORK"
+
+# Allow entangled-mcp
+iptables -A OUTPUT -d "$HOST_NETWORK" -p tcp --dport 8420 -j ACCEPT
+iptables -A INPUT -s "$HOST_NETWORK" -p tcp --dport 8421 -j ACCEPT
 
 # Set up remaining iptables rules
 iptables -A INPUT -s "$HOST_NETWORK" -j ACCEPT
@@ -135,3 +151,6 @@ if ! curl --connect-timeout 5 https://api.github.com/zen >/dev/null 2>&1; then
 else
     echo "Firewall verification passed - able to reach https://api.github.com as expected"
 fi
+
+# refresh entangled mcp server binary
+cp -f ./entangled-mcp /usr/local/bin/

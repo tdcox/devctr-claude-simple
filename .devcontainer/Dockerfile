@@ -71,7 +71,7 @@ ENV EDITOR=nano
 ENV VISUAL=nano
 
 # Spaceship theme
-ARG ZSH_IN_DOCKER_VERSION=1.2.0
+ARG ZSH_IN_DOCKER_VERSION=1.2.1
 RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
   -t https://github.com/denysdovhan/spaceship-prompt \
   -a 'SPACESHIP_PROMPT_ADD_NEWLINE="false"' \
@@ -91,10 +91,27 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | bash
 RUN curl -fsSL https://bun.sh/install | bash
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+RUN /home/node/.cargo/bin/cargo install cargo-llvm-cov
 
 COPY settings.json /home/node/.claude/settings.json
 COPY .ccstatusline/settings.json /home/node/.config/ccstatusline/settings.json
 
+# Install .NET SDK
+RUN dotnet_sdk_version=9.0.305 \
+    && dotnet_version=9.0.9 \
+    && curl --fail --show-error --location \
+        --remote-name https://builds.dotnet.microsoft.com/dotnet/Sdk/$dotnet_sdk_version/dotnet-sdk-$dotnet_sdk_version-linux-arm64.tar.gz \
+        --remote-name https://builds.dotnet.microsoft.com/dotnet/checksums/$dotnet_version-sha.txt \
+    && sed -i 's/\r$//' $dotnet_version-sha.txt \
+    && sha512sum -c $dotnet_version-sha.txt --ignore-missing \
+    && mkdir --parents /usr/local/share/dotnet \
+    && tar --gzip --extract --no-same-owner --file dotnet-sdk-$dotnet_sdk_version-linux-arm64.tar.gz --directory /usr/local/share/dotnet \
+    && rm \
+        dotnet-sdk-$dotnet_sdk_version-linux-arm64.tar.gz \
+        $dotnet_version-sha.txt
+ENV PATH=$PATH:/usr/local/share/dotnet
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/
@@ -103,3 +120,6 @@ RUN chmod +x /usr/local/bin/init-firewall.sh && \
   echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall && \
   chmod 0440 /etc/sudoers.d/node-firewall
 USER node
+
+# Add entangled MCP server with default settings
+RUN echo "claude mcp add entangled -s user -- entangled-mcp serve || true" >> /home/node/.zshrc

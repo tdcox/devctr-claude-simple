@@ -19,7 +19,10 @@
         "anthropic.claude-code",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "eamodio.gitlens"
+        "eamodio.gitlens",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "VisualStudioToolsForUnity.vstuc",
       ],
       "settings": {
         "editor.formatOnSave": true,
