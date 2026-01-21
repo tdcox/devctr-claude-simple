@@ -113,8 +113,11 @@ HOST_NETWORK=$(echo "$HOST_IP" | sed "s/\.[0-9]*$/.0\/24/")
 echo "Host network detected as: $HOST_NETWORK"
 
 # Allow entangled-mcp
-iptables -A OUTPUT -d "$HOST_NETWORK" -p tcp --dport 8420 -j ACCEPT
-iptables -A INPUT -s "$HOST_NETWORK" -p tcp --dport 8421 -j ACCEPT
+iptables -A OUTPUT -d 192.168.65.254 -p tcp --dport 8420 -j ACCEPT
+iptables -A INPUT -s 192.168.65.254 -p tcp --dport 8421 -j ACCEPT
+
+# Allow announcebot
+iptables -A OUTPUT -d 192.168.65.254 -p tcp --dport 8087 -j ACCEPT
 
 # Set up remaining iptables rules
 iptables -A INPUT -s "$HOST_NETWORK" -j ACCEPT
@@ -153,4 +156,4 @@ else
 fi
 
 # refresh entangled mcp server binary
-cp -f ./entangled-mcp /usr/local/bin/
+cp -f ./.devcontainer/entangled-mcp-linux-arm64 /usr/local/bin/entangled-mcp
